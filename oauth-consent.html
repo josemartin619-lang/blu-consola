@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Consola Operativa · Acceso</title>
+<style>
+  :root{--bg:#07080c;--fg:#ececf0;--muted:#8f8f99;--line:rgba(255,255,255,.12);--accent:#5AABEC}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  main{min-height:100%;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+  .card{max-width:420px;width:100%;border:1px solid var(--line);border-radius:14px;padding:28px 26px;background:rgba(20,22,30,.6)}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  h1{font-weight:500;font-size:22px;margin:8px 0 6px}
+  p{margin:0;color:var(--muted)}
+  a{color:var(--accent)}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:8px;animation:p 1.2s ease-in-out infinite}
+  @keyframes p{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="eyebrow">Consola Operativa</div>
+    <h1 id="title"><span class="dot"></span>Entrando…</h1>
+    <p id="msg">Confirmando su sesión de la consola.</p>
+  </div>
+</main>
+<script src="supabase.js"></script>
+<script>
+/* Single sign-on for Blu tools (e.g. bots.agenciablu.com).
+   Supabase's OAuth server sends the browser here with ?authorization_id=...
+   Team members who are signed in to the Consola are approved automatically (no second login);
+   anyone else is refused. */
+(function(){
+  'use strict';
+  var SB_URL = 'https://iodljeikkzwiozbslmku.supabase.co';
+  var SB_KEY = 'sb_publishable_s8HXMYPEyrjMnexrhRA0JA_vldoiYk3'; // public by design; access is enforced by row-level security
+  var sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+  var title = document.getElementById('title'), msg = document.getElementById('msg');
+  function show(t, html){ title.textContent = t; msg.innerHTML = html; }
+  var id = new URLSearchParams(location.search).get('authorization_id');
+  if (!id){ show('Enlace incompleto', 'Vuelva a la <a href="/">consola</a> y abra la herramienta desde allí.'); return; }
+
+  sb.auth.getSession().then(function(r){
+    var session = r && r.data && r.data.session;
+    if (!session){
+      try { sessionStorage.setItem('blu_sso_return', location.href); } catch (e) {}
+      show('Inicie sesión', 'Primero entre a la <a href="/">consola</a> con su correo; después vuelva a abrir la herramienta.');
+      return;
+    }
+    return sb.rpc('is_team').then(function(t){
+      if (t.error || t.data !== true){
+        return sb.auth.oauth.denyAuthorization(id).then(function(){
+          show('Sin acceso', 'Esta herramienta es solo para el equipo de Blu.');
+        });
+      }
+      return sb.auth.oauth.getAuthorizationDetails(id).then(function(d){
+        if (d.error) throw d.error;
+        if (d.data && d.data.redirect_url){ location.replace(d.data.redirect_url); return; } // already approved before
+        return sb.auth.oauth.approveAuthorization(id).then(function(a){ if (a.error) throw a.error; });
+      });
+    });
+  }).catch(function(e){
+    console.warn(e);
+    show('No se pudo entrar', 'Vuelva a abrir la herramienta desde la <a href="/">consola</a>. Si se repite, avise a Jose.');
+  });
+})();
+</script>
+</body>
+</html>
