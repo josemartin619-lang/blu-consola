@@ -315,7 +315,7 @@ function openAccess(){
 }
 
 /* The console itself lives in private storage: only signed-in team members and clients can download it. */
-var APP_FILE = 'app-d386a8c6ee.js';
+var APP_FILE = 'app-c27811e16d.js';
 function loadApp(){
   return sb.storage.from('app').download(APP_FILE).then(function(r){
     if (r.error) throw toErr(r.error);
