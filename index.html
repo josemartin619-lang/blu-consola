@@ -424,6 +424,12 @@ button.row:hover{background:rgba(255,255,255,.035)}
 .auth input::placeholder{color:var(--muted)}
 #authCode{letter-spacing:.32em;font-variant-numeric:tabular-nums}
 .auth .door[disabled]{opacity:.55;cursor:progress}
+.pw-rules{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted)}
+.pw-rules li::before{content:"\25CB";margin-right:6px;font-size:10px}
+.pw-rules li.ok{color:var(--ok)}
+.pw-rules li.ok::before{content:"\25CF"}
+.pw-intro{margin:0 0 4px;font-size:13.5px;line-height:1.5;color:var(--fg-2)}
+.auth .linkish{margin-top:2px}
 .linkish{background:none;border:0;padding:0;color:var(--fg-2);font:inherit;font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;justify-self:start}
 .linkish:hover{color:var(--fg)}
 .login-foot .who{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:baseline}
@@ -869,18 +875,30 @@ kbd{font-family:var(--f-ui);font-size:10.5px;letter-spacing:.04em;padding:1px 6p
       <button class="door" id="enterClient" type="button"><span class="eyebrow">Cliente</span><b>Portal del cliente</b><span>Su proyecto, sus flujos y lo que falta por hacer.</span></button>
     </div>
     <form class="auth" id="authBox" hidden novalidate>
-      <label class="eyebrow" for="authEmail">Su correo</label>
-      <input id="authEmail" type="email" autocomplete="email" inputmode="email" placeholder="nombre@empresa.com" spellcheck="false">
-      <button class="door" type="submit"><span class="eyebrow">Acceso</span><b>Recibir enlace</b><span>Le enviamos un enlace a su correo. Sin contraseñas.</span></button>
+      <label class="eyebrow" for="authEmail">Correo</label>
+      <input id="authEmail" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" spellcheck="false">
+      <label class="eyebrow" for="authPass">Contrase&ntilde;a</label>
+      <input id="authPass" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+      <button class="door" type="submit"><span class="eyebrow">Acceso</span><b>Entrar</b><span>Con su correo y su contrase&ntilde;a.</span></button>
+      <button class="linkish" id="authForgot" type="button">Olvid&eacute; mi contrase&ntilde;a</button>
     </form>
-    <form class="auth" id="codeBox" hidden novalidate>
-      <label class="eyebrow" for="authCode">Código del correo (si lo trae)</label>
-      <input id="authCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000" spellcheck="false">
-      <button class="door" type="submit"><span class="eyebrow">Verificar</span><b>Entrar</b><span>O abra el enlace del correo en este dispositivo.</span></button>
-      <button class="linkish" id="authBack" type="button">Usar otro correo</button>
+    <form class="auth" id="mfaBox" hidden novalidate>
+      <label class="eyebrow" for="authMfa">C&oacute;digo de verificaci&oacute;n</label>
+      <input id="authMfa" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" spellcheck="false">
+      <button class="door" type="submit"><span class="eyebrow">Verificaci&oacute;n en dos pasos</span><b>Verificar</b><span>El c&oacute;digo de su app de autenticaci&oacute;n.</span></button>
+      <button class="linkish" id="mfaBack" type="button">Salir y usar otra cuenta</button>
+    </form>
+    <form class="auth" id="passBox" hidden novalidate>
+      <p class="pw-intro" id="pwIntro"></p>
+      <label class="eyebrow" for="newPass">Nueva contrase&ntilde;a</label>
+      <input id="newPass" type="password" autocomplete="new-password" placeholder="M&iacute;nimo 10 caracteres">
+      <label class="eyebrow" for="newPass2">Repita la contrase&ntilde;a</label>
+      <input id="newPass2" type="password" autocomplete="new-password">
+      <ul class="pw-rules" id="pwRules"><li data-r="len">10 caracteres o m&aacute;s</li><li data-r="lower">una min&uacute;scula</li><li data-r="upper">una may&uacute;scula</li><li data-r="digit">un n&uacute;mero</li><li data-r="same">las dos iguales</li></ul>
+      <button class="door" type="submit"><span class="eyebrow">Su acceso</span><b>Guardar contrase&ntilde;a</b><span>Desde ahora entra con su correo y esta contrase&ntilde;a.</span></button>
     </form>
     <div class="login-msg" id="loginMsg" hidden></div>
-    <div class="login-foot">Acceso con su correo. El equipo ve el sistema completo; cada cliente ve &uacute;nicamente lo que le mostramos.</div>
+    <div class="login-foot">Acceso con correo y contrase&ntilde;a. El equipo ve el sistema completo; cada cliente ve &uacute;nicamente lo que le mostramos.</div>
   </div>
 </section>
 
@@ -984,7 +1002,7 @@ var RF = window.RF = { gain:1, target:0 };
 })();
 </script>
 <script src="supabase.js"></script>
-<script src="runtime.js?v=59a70bf234-r1"></script>
+<script src="runtime.js?v=59a70bf234-r2"></script>
 
 
 </body></html>
