@@ -431,10 +431,10 @@ function openAccess(){
 /* ---------- Seguridad: own password and two-step verification ---------- */
 function openSecurity(){
   var U = window.__ui; if (!U) return;
-  var h = U.h, body = h('div', { style: 'display:grid;gap:24px' });
-  function field(label, input){ return h('div', { class: 'field' }, h('label', { text: label }), input); }
+  var h = U.h, body = h('div', { style: 'display:grid;gap:24px;min-width:0;max-width:100%' });
+  function field(label, input){ return h('div', { class: 'field', style: 'min-width:0' }, h('label', { text: label }), input); }
   // password
-  var p1 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Mínimo 10 caracteres' }), p2 = h('input', { type: 'password', autocomplete: 'new-password' });
+  var p1 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Mínimo 10 caracteres', style: 'width:100%;min-width:0;box-sizing:border-box' }), p2 = h('input', { type: 'password', autocomplete: 'new-password', style: 'width:100%;min-width:0;box-sizing:border-box' });
   var pf = h('form', { style: 'display:grid;gap:8px' }, field('Contraseña nueva', p1), field('Repítala', p2),
     h('div', { class: 'muted', style: 'font-size:12.5px', text: '10 caracteres o más, con mayúscula, minúscula y número.' }),
     h('button', { class: 'btn small primary', type: 'submit', text: 'Cambiar contraseña', style: 'justify-self:start' }));
@@ -452,7 +452,7 @@ function openSecurity(){
     sb.auth.mfa.listFactors().then(function(f){
       if (f.error) throw f.error;
       var on = (f.data && f.data.totp || []).filter(function(x){ return x.status === 'verified'; });
-      var pending = (f.data && f.data.totp || []).filter(function(x){ return x.status !== 'verified'; });
+      var pending = (f.data && f.data.all || []).filter(function(x){ return x.status !== 'verified'; });
       if (on.length){
         mfaBody.appendChild(h('div', { class: 'row', style: 'grid-template-columns:minmax(0,1fr) auto' },
           h('span', { style: 'display:grid;gap:2px' }, h('span', { class: 't', text: 'Activada' }), h('span', { class: 's', text: 'Al entrar, además de la contraseña se pide el código de su app de autenticación.' })),
