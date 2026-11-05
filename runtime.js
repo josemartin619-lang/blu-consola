@@ -165,7 +165,7 @@ ready = sb.auth.getSession().then(function(r){
     if (t.error) throw t.error;
     if (t.data){
       S.role = 'team';
-      return sb.from('team_members').select('email,nombre,legacy_id').eq('email', S.session.user.email.toLowerCase()).maybeSingle().then(function(m){ S.me = m.data || null; });
+      return sb.from('team_members').select('email,nombre,legacy_id,rol').eq('email', S.session.user.email.toLowerCase()).maybeSingle().then(function(m){ S.me = m.data || null; S.socio = !S.me || S.me.rol !== 'empleado'; window.BLU_ROLE = S.socio ? 'socio' : 'empleado'; });
     }
     return sb.rpc('portal_data').then(function(p){
       if (p.error){ S.role = 'none'; return; }
@@ -274,7 +274,7 @@ function openAccess(){
   function fail(e){ U.toast(e && e.code === '23505' ? 'Ese correo ya tiene acceso' : 'No se pudo guardar el acceso'); }
   var EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   function draw(){
-    Promise.all([sb.from('team_members').select('email,nombre').order('email'), sb.from('client_users').select('email,client_id,nombre').order('email')]).then(function(r){
+    Promise.all([sb.from('team_members').select('email,nombre,rol').order('email'), sb.from('client_users').select('email,client_id,nombre').order('email')]).then(function(r){
       var team = r[0].data || [], cu = r[1].data || [], clients = U.clients(), names = {};
       clients.forEach(function(c){ names[c.id] = c.nombre; });
       body.innerHTML = '';
@@ -283,21 +283,30 @@ function openAccess(){
       var tl = h('div', { class: 'list' });
       team.forEach(function(t){
         var self = S.session && t.email === S.session.user.email.toLowerCase();
-        tl.appendChild(rowOf((t.nombre ? t.nombre + ' · ' : '') + t.email + (self ? ' (usted)' : ''), null, self ? null : function(){
+        var rl = (t.rol === 'empleado') ? 'Empleado' : 'Socio';
+        var row = rowOf((t.nombre ? t.nombre + ' · ' : '') + t.email + (self ? ' (usted)' : ''), rl, (self || !S.socio) ? null : function(){
           sb.from('team_members').delete().eq('email', t.email).then(function(x){ if (x.error) fail(x.error); else { U.toast('Acceso quitado'); draw(); } });
-        }));
+        });
+        if (S.socio && !self){
+          var rs = h('select', { style: 'width:auto;margin-right:8px' }, h('option', { value: 'socio', text: 'Socio' }), h('option', { value: 'empleado', text: 'Empleado' }));
+          rs.value = t.rol === 'empleado' ? 'empleado' : 'socio';
+          rs.addEventListener('change', function(){ sb.from('team_members').update({ rol: rs.value }).eq('email', t.email).then(function(x){ if (x.error) fail(x.error); else { U.toast('Rol actualizado'); draw(); } }); });
+          row.style.gridTemplateColumns = 'minmax(0,1fr) auto auto'; row.insertBefore(rs, row.lastChild);
+        }
+        tl.appendChild(row);
       });
-      var te = h('input', { type: 'email', placeholder: 'socio@agenciablu.com' }), tn = h('input', { type: 'text', placeholder: 'Nombre' });
-      var tf = h('form', { style: 'display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;align-items:end' },
-        field('Correo', te), field('Nombre', tn), h('button', { class: 'btn small primary', type: 'submit', text: 'Agregar' }));
+      var te = h('input', { type: 'email', placeholder: 'nombre@agenciablu.com' }), tn = h('input', { type: 'text', placeholder: 'Nombre' });
+      var tr = h('select', {}, h('option', { value: 'empleado', text: 'Empleado' }), h('option', { value: 'socio', text: 'Socio' }));
+      var tf = h('form', { style: 'display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;gap:8px;align-items:end' },
+        field('Correo', te), field('Nombre', tn), field('Rol', tr), h('button', { class: 'btn small primary', type: 'submit', text: 'Agregar' }));
       tf.addEventListener('submit', function(e){ e.preventDefault(); var v = te.value.trim().toLowerCase(); if (!EMAIL.test(v)) return;
-        sb.from('team_members').insert({ email: v, nombre: tn.value.trim() || null }).then(function(x){ if (x.error) fail(x.error); else { U.toast('Acceso agregado'); draw(); } }); });
-      body.appendChild(h('section', { style: 'display:grid;gap:10px' }, h('div', { class: 'h2', text: 'Equipo' }), h('div', { class: 'muted', style: 'font-size:13px', text: 'Ve todo y puede editar.' }), tl, tf));
+        sb.from('team_members').insert({ email: v, nombre: tn.value.trim() || null, rol: tr.value }).then(function(x){ if (x.error) fail(x.error); else { U.toast('Acceso agregado. Que entre en consola.agenciablu.com con ese correo.'); draw(); } }); });
+      body.appendChild(h('section', { style: 'display:grid;gap:10px' }, h('div', { class: 'h2', text: 'Equipo' }), h('div', { class: 'muted', style: 'font-size:13px', text: S.socio ? 'Socios: ven todo y manejan los accesos. Empleados: trabajan en clientes, flujos y tareas, pero no agregan ni quitan accesos.' : 'Solo un socio puede agregar o quitar accesos.' }), tl, S.socio ? tf : null));
 
       var cl = h('div', { class: 'list' });
       if (!cu.length) cl.appendChild(h('div', { class: 'row', style: 'grid-template-columns:1fr' }, h('span', { class: 's', text: 'Todavía no hay accesos de clientes.' })));
       cu.forEach(function(c){
-        cl.appendChild(rowOf((c.nombre ? c.nombre + ' · ' : '') + c.email, names[c.client_id] || c.client_id, function(){
+        cl.appendChild(rowOf((c.nombre ? c.nombre + ' · ' : '') + c.email, names[c.client_id] || c.client_id, !S.socio ? null : function(){
           sb.from('client_users').delete().eq('email', c.email).then(function(x){ if (x.error) fail(x.error); else { U.toast('Acceso quitado'); draw(); } });
         }));
       });
@@ -307,7 +316,7 @@ function openAccess(){
         field('Correo', ce), field('Cliente', cs), h('button', { class: 'btn small primary', type: 'submit', text: 'Agregar' }));
       cf.addEventListener('submit', function(e){ e.preventDefault(); var v = ce.value.trim().toLowerCase(); if (!EMAIL.test(v) || !cs.value) return;
         sb.from('client_users').insert({ email: v, client_id: cs.value }).then(function(x){ if (x.error) fail(x.error); else { U.toast('Acceso agregado'); draw(); } }); });
-      body.appendChild(h('section', { style: 'display:grid;gap:10px' }, h('div', { class: 'h2', text: 'Portales de clientes' }), h('div', { class: 'muted', style: 'font-size:13px', text: 'Ve solo el portal de su empresa, sin notas internas.' }), cl, cf,
+      body.appendChild(h('section', { style: 'display:grid;gap:10px' }, h('div', { class: 'h2', text: 'Portales de clientes' }), h('div', { class: 'muted', style: 'font-size:13px', text: 'Ve solo el portal de su empresa, sin notas internas.' }), cl, S.socio ? cf : null,
         h('div', { class: 'muted', style: 'font-size:12.5px', text: 'Para entrar: consola.agenciablu.com con ese correo.' })));
     });
   }
