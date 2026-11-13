@@ -178,6 +178,10 @@ function loadRole(){
     return sb.rpc('portal_data').then(function(p){
       if (p.error){ S.role = 'none'; return; }
       S.role = 'client'; window.PORTAL_DATA = p.data;
+      // extra portal sections (onboarding guide, invoices); a database without them simply shows those sections empty
+      return sb.rpc('portal_extra').then(function(x){
+        if (!x.error && x.data && p.data && p.data.cols) Object.keys(x.data).forEach(function(k){ p.data.cols[k] = x.data[k]; });
+      }, function(){});
     });
   });
 }
@@ -489,7 +493,7 @@ function openSecurity(){
 }
 
 /* The console itself lives in private storage: only signed-in team members and clients can download it. */
-var APP_FILE = 'app-59a70bf234.js';
+var APP_FILE = 'app-3a79eb9fd0.js';
 function loadApp(){
   return sb.storage.from('app').download(APP_FILE).then(function(r){
     if (r.error) throw toErr(r.error);
